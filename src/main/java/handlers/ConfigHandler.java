@@ -87,7 +87,13 @@ public class ConfigHandler {
     public final static long LIVE_GRANULARITY_IN_SECONDS = 10;
     //TODO define schema for all the database tables
 
-
     //Common Variables;
     public final static boolean REPORT_ERROR = false;
+
+    //BMS Variables
+    public final static String BMS_PORTAL_HOST ="10.129.149.33";
+    public final static String BMS_PORTAL_PORT ="1337";
+    public final static String BMS_PORTAL_ALERT_URL ="http://"+BMS_PORTAL_HOST+":"+BMS_PORTAL_PORT+"/alert/generate";
+
+
 }

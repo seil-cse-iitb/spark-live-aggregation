@@ -1,6 +1,7 @@
 package test;
 
 import handlers.ConfigHandler;
+import handlers.LogHandler;
 import handlers.SparkHandler;
 import handlers.UtilsHandler;
 import org.apache.spark.api.java.function.MapFunction;
@@ -12,7 +13,9 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.streaming.StreamingQueryException;
+import org.apache.spark.sql.streaming.Trigger;
 
+import java.net.URLEncoder;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
@@ -70,29 +73,74 @@ public class BatteryVoltageAlertTest {
         }, rowExpressionEncoder);
 
         StreamingQuery console = streamDataset.writeStream()
+//                .trigger(Trigger.ProcessingTime(20000))
                 .outputMode(OutputMode.Update())
                 .foreach(new ForeachWriter<Row>() {
+
                     @Override
                     public boolean open(long l, long l1) {
                         return true;
                     }
 
+                    //String targetID{Should be unique}{here sensor_id concatenated with id column,
+                    //level{danger,warn,info,success},type{},title,description;
                     @Override
                     public void process(Row row) {
                         double batteryVoltage = row.getDouble(row.fieldIndex("battery_voltage"));
                         double temperature = row.getDouble(row.fieldIndex("temperature"));
-                        if (batteryVoltage <= 3.4) {
+
+                        String targetId= URLEncoder.encode(row.getString(row.fieldIndex("sensor_id"))+"_"+row.getDouble(row.fieldIndex("id")));
+                        String level,type,title,description;
+                        if (batteryVoltage <= 3.1) {
                             System.out.println("BatteryVoltage: "+row);
+                            type="BatteryVoltage";
+                            level = "warn";
+                            title =URLEncoder.encode("Sensor Battery Low");
+                            description = URLEncoder.encode("["+sensorId+"]The sensor's battery is low. Need to be charged. Please replace the battery and charge it.");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
+                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
                         }
-                        if(temperature>50){
-                            System.out.println("Temperature: "+row);
+                        if(temperature>80 || temperature<=10){
+                            System.out.println("FaultyTemperature: "+row);
+                            type="FaultyTemperature";
+                            level = "warn";
+                            title =URLEncoder.encode("Faulty Temperature Sensor");
+                            description = URLEncoder.encode("["+sensorId+"]Temperature sensor is giving false value: [Temperature:"+temperature+"]");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
+                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
+                        }else if (temperature>32){
+                            System.out.println("AnomalousTemperature: "+row);
+                            type="AnomalousTemperature";
+                            level = "danger";
+                            title =URLEncoder.encode("Anomalous Temperature Detected!");
+                            description = URLEncoder.encode("["+sensorId+"]Unusual temperature readings found (might be fire): [Temperature:"+temperature+"]");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
+                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
                         }
+
                     }
+//ask shinjan: keep track of alerts using a id+alert_type (where I will send a unique id per alert type) i.e. combination of id+alert_type will be unique for database.
+// Also define a level of alert (danger,warning,info) which is already done.
+// Now define alert's life span in which I will send the duration in terms of (min,hour,day,month,year,infinite)
+// If no alert request comes in that duration for that alert then remove it
 
                     @Override
                     public void close(Throwable throwable) {
 
                     }
+
+                    private void sendGetRequest(final String url){
+                        new Thread(new Runnable() {
+                            public void run() {
+                                try {
+                                    UtilsHandler.makeGetRequest(url);
+                                }catch (Exception e){
+                                    LogHandler.logError("[GET_REQUEST:"+url+"]"+e.getMessage());
+                                }
+                            }
+                        }).start();
+                    }
+
                 })
                 .start();
         try {

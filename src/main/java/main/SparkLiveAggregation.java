@@ -188,7 +188,7 @@ public class SparkLiveAggregation implements Serializable {
                         try {
                             Statement statement = mysqlConnection.createStatement();
                             int result = statement.executeUpdate(replaceSQL);
-                            LogHandler.logInfo("[" + sensorId + "][ReplaceQueryOutput: " + result + "]");
+                            LogHandler.logInfo("[" + sensorId + "][ReplaceQueryOutput: " + result + "][Record: "+replaceSQL+"]\n");
                         } catch (SQLException e) {
                             e.printStackTrace();
                             LogHandler.logError("[" + sensorId + "][SQLException]" + e.getMessage() + "\n[ReplaceSQL:" + replaceSQL + "]");
