@@ -67,6 +67,14 @@ public class ConfigHandler {
             .add(DataTypes.createStructField("Lane", IntegerType, true))
             .add(DataTypes.createStructField("room", StringType, true))
             .add(DataTypes.createStructField("temperature", DoubleType, true));
+    public final static StructType SCHEMA_DHT_7 = new StructType()
+            .add(DataTypes.createStructField("sensor_id", StringType, false))
+            .add(DataTypes.createStructField("TS_RECV", DoubleType, false))
+            .add(DataTypes.createStructField("TS", DoubleType, true))
+            .add(DataTypes.createStructField("id", DoubleType, true))
+            .add(DataTypes.createStructField("temperature", DoubleType, true))
+            .add(DataTypes.createStructField("humidity", DoubleType, true))
+            .add(DataTypes.createStructField("battery_voltage", DoubleType, true));
     public final static String[] SQL_AGGREGATION_FORMULA_TEMP_5 = {"first(sensor_id) as sensor_id", "last(TS_RECV) as TS_RECV","first(Zone) as Zone","first(Lane) as Lane","first(room) as room", "avg(temperature) as temperature",};
 
     //TODO define aggregation formula for all the database tables

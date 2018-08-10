@@ -159,7 +159,7 @@ public class SparkLiveAggregation implements Serializable {
 //        dataset = dataset.repartition(1);
         StreamingQuery console = dataset.writeStream()
                 .outputMode(OutputMode.Update())
-                .trigger(Trigger.ProcessingTime(Duration.apply("2 min")))
+//                .trigger(Trigger.ProcessingTime(Duration.apply("2 min")))
                 .foreach(new ForeachWriter<Row>() {
                     Connection mysqlConnection = null;
 
@@ -167,11 +167,13 @@ public class SparkLiveAggregation implements Serializable {
                     public boolean open(long l, long l1) {
 //                        System.out.println("open=> partition:" + l + ",version:" + l1);
                         mysqlConnection = mySQLHandler.buildConnection();
+//                        System.out.println(l+":"+l1);
                         return true;
                     }
 
                     @Override
                     public void process(Row row) {
+//                        System.out.println(row);
                         String[] fieldNames = row.schema().fieldNames();
                         Object[] values = new Object[fieldNames.length];
                         for (int i = 0; i < fieldNames.length; i++) {

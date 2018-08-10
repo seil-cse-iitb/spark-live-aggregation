@@ -20,11 +20,11 @@ public class SparkHandler implements scala.Serializable {
     }
 
     public void initSession() {
-        sparkSession = SparkSession.builder().appName("Java SparkHandler Demo")
-                .config("sparkHandler.sql.warehouse.dir", "~/sparkHandler-warehouse")
-                .config("sparkHandler.executor.memory", "2g")
-                .config("sparkHandler.driver.allowMultipleContexts", "true")
-//                .master("sparkHandler://10.129.149.14:7077") //can't print on console..Don't know why
+        sparkSession = SparkSession.builder().appName(ConfigHandler.SCRIPT_IDENTITY_TEXT)
+                .config("spark.sql.warehouse.dir", "~/sparkHandler-warehouse")
+                .config("spark.executor.memory", "2g")
+                .config("spark.driver.allowMultipleContexts", "true")
+//                .master("spark://10.129.149.14:7077") //can't print on console..Don't know why
                 .master("local[*]")
 
                 .getOrCreate();

@@ -8,4 +8,7 @@
     </option>
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="1.8" project-jdk-type="JavaSDK" />
+  <component name="RSProjectComponent">
+    <option name="myShowResourcesView" value="false" />
+  </component>
 </project>

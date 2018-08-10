@@ -79,6 +79,7 @@ public class SparkLiveAggregationTest {
                 }
             });
             thread.start();
+            break;
         }
 
 
