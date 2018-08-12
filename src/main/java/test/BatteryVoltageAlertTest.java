@@ -39,7 +39,7 @@ public class BatteryVoltageAlertTest {
             final int finalI = i;
             Thread thread = new Thread(new Runnable() {
                 public void run() {
-                    System.out.println("Monitoring: "+sensorId[finalI]);
+//                    System.out.println("Monitoring: "+sensorId[finalI]);
                     monitor(sparkHandler, sensorId[finalI]);
                 }
             });
@@ -55,6 +55,7 @@ public class BatteryVoltageAlertTest {
                 .option("localStorage", "/tmp/spark-mqtt/")
                 .option("QoS", 0)
                 .load(ConfigHandler.MQTT_URL);
+        LogHandler.logInfo("[Monitoring]=>[SensorId:"+sensorId+"][Topic:"+UtilsHandler.getTopic(sensorId)+"]");
         Dataset<Row> emptyTable = sparkHandler.sparkSession.createDataFrame(new ArrayList<Row>(), ConfigHandler.SCHEMA_DHT_7);
         ExpressionEncoder<Row> rowExpressionEncoder = emptyTable.exprEnc();
         Dataset<Row> streamDataset = stream.map(new MapFunction<Row, Row>() {
