@@ -55,7 +55,7 @@ public class BatteryVoltageAlertTest {
                 .option("localStorage", "/tmp/spark-mqtt/")
                 .option("QoS", 0)
                 .load(ConfigHandler.MQTT_URL);
-        LogHandler.logInfo("[Monitoring]=>[SensorId:"+sensorId+"][Topic:"+UtilsHandler.getTopic(sensorId)+"]");
+        LogHandler.logInfo("[Monitoring]=>[SensorId:" + sensorId + "][Topic:" + UtilsHandler.getTopic(sensorId) + "]");
         Dataset<Row> emptyTable = sparkHandler.sparkSession.createDataFrame(new ArrayList<Row>(), ConfigHandler.SCHEMA_DHT_7);
         ExpressionEncoder<Row> rowExpressionEncoder = emptyTable.exprEnc();
         Dataset<Row> streamDataset = stream.map(new MapFunction<Row, Row>() {
@@ -87,56 +87,53 @@ public class BatteryVoltageAlertTest {
                     //level{danger,warn,info,success},type{},title,description;
                     @Override
                     public void process(Row row) {
+                        System.out.println(row.toString());
                         double batteryVoltage = row.getDouble(row.fieldIndex("battery_voltage"));
                         double temperature = row.getDouble(row.fieldIndex("temperature"));
 
-                        String targetId= URLEncoder.encode(row.getString(row.fieldIndex("sensor_id"))+"_"+row.getDouble(row.fieldIndex("id")));
-                        String level,type,title,description;
+                        String targetId = URLEncoder.encode(row.getString(row.fieldIndex("sensor_id")) + "_" + row.getDouble(row.fieldIndex("id")));
+                        String level, type, title, description;
                         if (batteryVoltage <= 3.1) {
-                            System.out.println("BatteryVoltage: "+row);
-                            type="BatteryVoltage";
+                            System.out.println("BatteryVoltage: " + row);
+                            type = "BatteryVoltage";
                             level = "warn";
-                            title =URLEncoder.encode("Sensor Battery Low");
-                            description = URLEncoder.encode("["+sensorId+"]The sensor's battery is low. Need to be charged. Please replace the battery and charge it.");
-                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
-                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
+                            title = URLEncoder.encode("Sensor Battery Low");
+                            description = URLEncoder.encode("[" + targetId + "]The sensor's battery is low. Need to be charged. Please replace the battery and charge it.");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL + "?" +
+                                    "target_id=" + targetId + "&level=" + level + "&type=" + type + "&title=" + title + "&description=" + description);
                         }
-                        if(temperature>80 || temperature<=10){
-                            System.out.println("FaultyTemperature: "+row);
-                            type="FaultyTemperature";
+                        if (temperature > 80 || temperature <= 7) {
+                            System.out.println("FaultyTemperature: " + row);
+                            type = "FaultyTemperature";
                             level = "warn";
-                            title =URLEncoder.encode("Faulty Temperature Sensor");
-                            description = URLEncoder.encode("["+sensorId+"]Temperature sensor is giving false value: [Temperature:"+temperature+"]");
-                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
-                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
-                        }else if (temperature>32){
-                            System.out.println("AnomalousTemperature: "+row);
-                            type="AnomalousTemperature";
+                            title = URLEncoder.encode("Faulty Temperature Sensor");
+                            description = URLEncoder.encode("[" + targetId + "]Temperature sensor is giving false value: [Temperature:" + temperature + "]");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL + "?" +
+                                    "target_id=" + targetId + "&level=" + level + "&type=" + type + "&title=" + title + "&description=" + description);
+                        } else if (temperature > 32) {
+                            System.out.println("AnomalousTemperature: " + row);
+                            type = "AnomalousTemperature";
                             level = "danger";
-                            title =URLEncoder.encode("Anomalous Temperature Detected!");
-                            description = URLEncoder.encode("["+sensorId+"]Unusual temperature readings found (might be fire): [Temperature:"+temperature+"]");
-                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL +"?" +
-                                    "target_id="+targetId+"&level="+level+"&type="+type+"&title="+title+"&description="+description);
+                            title = URLEncoder.encode("Anomalous Temperature Detected!");
+                            description = URLEncoder.encode("[" + targetId + "]Unusual temperature readings found (might be fire): [Temperature:" + temperature + "]");
+                            sendGetRequest(ConfigHandler.BMS_PORTAL_ALERT_URL + "?" +
+                                    "target_id=" + targetId + "&level=" + level + "&type=" + type + "&title=" + title + "&description=" + description);
                         }
 
                     }
-//ask shinjan: keep track of alerts using a id+alert_type (where I will send a unique id per alert type) i.e. combination of id+alert_type will be unique for database.
-// Also define a level of alert (danger,warning,info) which is already done.
-// Now define alert's life span in which I will send the duration in terms of (min,hour,day,month,year,infinite)
-// If no alert request comes in that duration for that alert then remove it
 
                     @Override
                     public void close(Throwable throwable) {
 
                     }
 
-                    private void sendGetRequest(final String url){
+                    private void sendGetRequest(final String url) {
                         new Thread(new Runnable() {
                             public void run() {
                                 try {
                                     UtilsHandler.makeGetRequest(url);
-                                }catch (Exception e){
-                                    LogHandler.logError("[GET_REQUEST:"+url+"]"+e.getMessage());
+                                } catch (Exception e) {
+                                    LogHandler.logError("[GET_REQUEST:" + url + "]" + e.getMessage());
                                 }
                             }
                         }).start();

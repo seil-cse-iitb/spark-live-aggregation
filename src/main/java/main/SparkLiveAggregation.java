@@ -2,32 +2,26 @@ package main;
 
 import handlers.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.ForeachFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.streaming.OutputMode;
-import org.apache.spark.sql.streaming.StreamingQuery;
-import org.apache.spark.sql.streaming.StreamingQueryException;
-import org.apache.spark.sql.streaming.Trigger;
+import org.apache.spark.sql.streaming.*;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.util.AccumulatorV2;
-import org.apache.spark.util.DoubleAccumulator;
-import org.apache.spark.util.LongAccumulator;
-import scala.Some;
+import org.apache.spark.streaming.scheduler.StreamingListener;
+import org.apache.spark.streaming.scheduler.StreamingListenerBatchCompleted;
+import org.apache.spark.streaming.scheduler.StreamingListenerOutputOperationCompleted;
 import scala.concurrent.duration.Duration;
 
-import static handlers.ConfigHandler.*;
-
 import java.io.Serializable;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 
+import static handlers.ConfigHandler.*;
+//https://github.com/apache/bahir/tree/master/sql-streaming-jdbc
 public class SparkLiveAggregation implements Serializable {
 
     String sensorId;//temp_k_205
@@ -106,6 +100,7 @@ public class SparkLiveAggregation implements Serializable {
     public void startAggregation() {
         String topic = UtilsHandler.getTopic(sensorId);
         LogHandler.logInfo("[" + sensorId + "]Topic(" + topic + ")]");
+//https://github.com/apache/bahir/tree/master/sql-streaming-jdbc
         Dataset<Row> stream = sparkHandler.sparkSession
                 .readStream()
                 .format("org.apache.bahir.sql.streaming.mqtt.MQTTStreamSourceProvider")
@@ -113,6 +108,8 @@ public class SparkLiveAggregation implements Serializable {
                 .option("localStorage", "/tmp/spark-mqtt/")
                 .option("QoS", 0)
                 .load(ConfigHandler.MQTT_URL);
+        stream.withWatermark("ts", "1 second").groupBy(functions.col("topic"),functions.window(functions.col("ts"), "1 minutes")).agg(null).foreach();
+
 //        stream.printSchema();
         Dataset<Row> emptyTable = sparkHandler.sparkSession.createDataFrame(new ArrayList<Row>(), SCHEMA);
         ExpressionEncoder<Row> rowExpressionEncoder = emptyTable.exprEnc();
@@ -159,7 +156,7 @@ public class SparkLiveAggregation implements Serializable {
 //        dataset = dataset.repartition(1);
         StreamingQuery console = dataset.writeStream()
                 .outputMode(OutputMode.Update())
-//                .trigger(Trigger.ProcessingTime(Duration.apply("2 min")))
+                .trigger(Trigger.ProcessingTime(Duration.apply("2 min")))
                 .foreach(new ForeachWriter<Row>() {
                     Connection mysqlConnection = null;
 
@@ -174,6 +171,7 @@ public class SparkLiveAggregation implements Serializable {
                     @Override
                     public void process(Row row) {
 //                        System.out.println(row);
+
                         String[] fieldNames = row.schema().fieldNames();
                         Object[] values = new Object[fieldNames.length];
                         for (int i = 0; i < fieldNames.length; i++) {
